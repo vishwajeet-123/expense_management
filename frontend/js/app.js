@@ -4,7 +4,7 @@
  */
 
 document.addEventListener('DOMContentLoaded', () => {
-    const API_URL = '/api';
+    const API_URL = 'https://expense-management-5lxj.onrender.com/api/auth/signup';
     
     // --- AUTHENTICATION LOGIC ---
     
