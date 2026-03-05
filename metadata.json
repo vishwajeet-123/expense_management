@@ -1,0 +1,5 @@
+{
+  "name": "Clean Expense Tracker",
+  "description": "A professional full-stack expense management system featuring JWT authentication, real-time dashboard analytics, and categorized expense tracking.",
+  "requestFramePermissions": []
+}
