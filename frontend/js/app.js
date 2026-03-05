@@ -103,11 +103,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const openModal = (expense = null) => {
             if (expense) {
                 document.getElementById('modalTitle').textContent = 'Edit Expense';
-                document.getElementById('expenseId').value = expense.id;
+                document.getElementById('expenseId').value = expense._id;
                 document.getElementById('title').value = expense.title;
                 document.getElementById('amount').value = expense.amount;
                 document.getElementById('category').value = expense.category;
-                document.getElementById('date').value = expense.date;
+                document.getElementById('date').value = new Date(expense.date).toISOString().split('T')[0];
                 document.getElementById('saveBtn').textContent = 'Update Expense';
             } else {
                 document.getElementById('modalTitle').textContent = 'Add New Expense';
@@ -153,8 +153,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     </td>
                     <td>${new Date(exp.date).toLocaleDateString()}</td>
                     <td class="actions">
-                        <button class="btn-icon btn-edit" onclick="editExpense(${exp.id})"><i class="fas fa-edit"></i></button>
-                        <button class="btn-icon btn-delete" onclick="deleteExpense(${exp.id})"><i class="fas fa-trash"></i></button>
+                        <button class="btn-icon btn-edit" onclick="editExpense('${exp._id}')"><i class="fas fa-edit"></i></button>
+                        <button class="btn-icon btn-delete" onclick="deleteExpense('${exp._id}')"><i class="fas fa-trash"></i></button>
                     </td>
                 `;
                 tbody.appendChild(tr);
@@ -185,7 +185,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 const expenses = await res.json();
-                const expense = expenses.find(e => e.id === id);
+                const expense = expenses.find(e => e._id === id);
                 if (expense) openModal(expense);
             } catch (err) {
                 console.error(err);

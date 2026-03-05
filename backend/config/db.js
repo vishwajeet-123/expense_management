@@ -1,28 +1,14 @@
-const sqlite = require('better-sqlite3');
-const path = require('path');
+const mongoose = require('mongoose');
+require('dotenv').config();
 
-// Using SQLite for this environment to ensure persistence without external setup
-// In a real production environment, you would use Mongoose with MongoDB
-const db = new sqlite(path.join(__dirname, '../../database.sqlite'));
+const connectDB = async () => {
+  try {
+    const conn = await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/expense-tracker');
+    console.log(`MongoDB Connected: ${conn.connection.host}`);
+  } catch (error) {
+    console.error(`Error: ${error.message}`);
+    process.exit(1);
+  }
+};
 
-// Initialize tables
-db.exec(`
-  CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    email TEXT UNIQUE NOT NULL,
-    password TEXT NOT NULL
-  );
-
-  CREATE TABLE IF NOT EXISTS expenses (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    userId INTEGER NOT NULL,
-    title TEXT NOT NULL,
-    amount REAL NOT NULL,
-    category TEXT NOT NULL,
-    date TEXT NOT NULL,
-    FOREIGN KEY (userId) REFERENCES users (id)
-  );
-`);
-
-module.exports = db;
+module.exports = connectDB;

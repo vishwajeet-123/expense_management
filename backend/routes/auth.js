@@ -1,7 +1,7 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const db = require('../config/db');
+const User = require('../models/User');
 const router = express.Router();
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your_super_secret_key_123';
@@ -16,18 +16,24 @@ router.post('/signup', async (req, res) => {
     }
 
     // Check if user exists
-    const existingUser = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
-    if (existingUser) {
+    let user = await User.findOne({ email });
+    if (user) {
       return res.status(400).json({ message: 'User already exists' });
     }
 
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Insert user
-    const info = db.prepare('INSERT INTO users (name, email, password) VALUES (?, ?, ?)').run(name, email, hashedPassword);
+    // Create user
+    user = new User({
+      name,
+      email,
+      password: hashedPassword
+    });
+
+    await user.save();
     
-    res.status(201).json({ message: 'User created successfully', userId: info.lastInsertRowid });
+    res.status(201).json({ message: 'User created successfully', userId: user._id });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error during signup' });
@@ -44,7 +50,7 @@ router.post('/login', async (req, res) => {
     }
 
     // Find user
-    const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
+    const user = await User.findOne({ email });
     if (!user) {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
@@ -56,12 +62,12 @@ router.post('/login', async (req, res) => {
     }
 
     // Generate JWT
-    const token = jwt.sign({ id: user.id, name: user.name }, JWT_SECRET, { expiresIn: '24h' });
+    const token = jwt.sign({ id: user._id, name: user.name }, JWT_SECRET, { expiresIn: '24h' });
 
     res.json({
       token,
       user: {
-        id: user.id,
+        id: user._id,
         name: user.name,
         email: user.email
       }

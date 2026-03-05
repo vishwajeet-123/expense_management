@@ -1,6 +1,6 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
-const db = require('../config/db');
+const Expense = require('../models/Expense');
 const router = express.Router();
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your_super_secret_key_123';
@@ -20,9 +20,9 @@ const auth = (req, res, next) => {
 };
 
 // GET /api/expenses - Get all expenses for logged in user
-router.get('/', auth, (req, res) => {
+router.get('/', auth, async (req, res) => {
   try {
-    const expenses = db.prepare('SELECT * FROM expenses WHERE userId = ? ORDER BY date DESC').all(req.user.id);
+    const expenses = await Expense.find({ userId: req.user.id }).sort({ date: -1 });
     res.json(expenses);
   } catch (error) {
     res.status(500).json({ message: 'Error fetching expenses' });
@@ -30,25 +30,22 @@ router.get('/', auth, (req, res) => {
 });
 
 // POST /api/expenses - Add new expense
-router.post('/', auth, (req, res) => {
+router.post('/', auth, async (req, res) => {
   try {
     const { title, amount, category, date } = req.body;
     if (!title || !amount || !category || !date) {
       return res.status(400).json({ message: 'All fields are required' });
     }
 
-    const info = db.prepare('INSERT INTO expenses (userId, title, amount, category, date) VALUES (?, ?, ?, ?, ?)')
-      .run(req.user.id, title, amount, category, date);
-    
-    const newExpense = {
-      id: info.lastInsertRowid,
+    const newExpense = new Expense({
       userId: req.user.id,
       title,
       amount,
       category,
       date
-    };
-    
+    });
+
+    await newExpense.save();
     res.status(201).json(newExpense);
   } catch (error) {
     res.status(500).json({ message: 'Error adding expense' });
@@ -56,34 +53,32 @@ router.post('/', auth, (req, res) => {
 });
 
 // PUT /api/expenses/:id - Update expense
-router.put('/:id', auth, (req, res) => {
+router.put('/:id', auth, async (req, res) => {
   try {
     const { title, amount, category, date } = req.body;
     const expenseId = req.params.id;
 
-    // Verify ownership
-    const expense = db.prepare('SELECT * FROM expenses WHERE id = ? AND userId = ?').get(expenseId, req.user.id);
+    const expense = await Expense.findOneAndUpdate(
+      { _id: expenseId, userId: req.user.id },
+      { title, amount, category, date },
+      { new: true }
+    );
+
     if (!expense) return res.status(404).json({ message: 'Expense not found' });
 
-    db.prepare('UPDATE expenses SET title = ?, amount = ?, category = ?, date = ? WHERE id = ?')
-      .run(title, amount, category, date, expenseId);
-
-    res.json({ message: 'Expense updated successfully' });
+    res.json({ message: 'Expense updated successfully', expense });
   } catch (error) {
     res.status(500).json({ message: 'Error updating expense' });
   }
 });
 
 // DELETE /api/expenses/:id - Delete expense
-router.delete('/:id', auth, (req, res) => {
+router.delete('/:id', auth, async (req, res) => {
   try {
     const expenseId = req.params.id;
 
-    // Verify ownership
-    const expense = db.prepare('SELECT * FROM expenses WHERE id = ? AND userId = ?').get(expenseId, req.user.id);
+    const expense = await Expense.findOneAndDelete({ _id: expenseId, userId: req.user.id });
     if (!expense) return res.status(404).json({ message: 'Expense not found' });
-
-    db.prepare('DELETE FROM expenses WHERE id = ?').run(expenseId);
 
     res.json({ message: 'Expense deleted successfully' });
   } catch (error) {
